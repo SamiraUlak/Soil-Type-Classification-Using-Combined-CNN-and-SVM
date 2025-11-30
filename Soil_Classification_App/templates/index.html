@@ -1,0 +1,113 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Soil Image Classifier</title>
+  <!-- External CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+  <div class="card">
+    <!-- Header -->
+    <div class="header-row">
+      <img src="{{ url_for('static', filename='logo.png') }}" class="logo" alt="Logo">
+      <div>
+        <h1 class="title">Soil Image Classifier</h1>
+        <p class="subtitle">Upload soil image to detect class</p>
+      </div>
+    </div>
+
+    <!-- Upload Form -->
+    <form method="post" enctype="multipart/form-data" action="{{ url_for('predict_route') }}" class="form-row">
+      <!-- persist filename across page reloads -->
+      <input type="hidden" name="last_file" id="last_file" value="{{ filename or '' }}">
+
+      <!-- custom file field; we control the text -->
+      <label class="file-field">
+        <input id="file-input" type="file" name="file" accept=".jpg,.jpeg,.png,image/*" required>
+        <span class="file-btn">Choose Image</span>
+        <span id="file-text" class="file-text">{{ filename or 'No image chosen' }}</span>
+      </label>
+
+      <button type="submit" class="btn-predict">Predict</button>
+      <button type="button" id="clear-btn" class="btn-clear">Clear</button>
+    </form>
+
+    <div class="main-grid">
+      <!-- Preview -->
+      <div class="preview-box">
+        {% if filename %}
+          <div class="stage">
+            <img src="{{ url_for('uploaded_file', filename=filename) }}" alt="uploaded image">
+          </div>
+          <p class="small-text">Uploaded: {{ filename }}</p>
+        {% else %}
+          <div class="stage" id="preview">
+            <img id="preview-img" class="hidden" alt="preview">
+          </div>
+          <p class="small-text">No image selected</p>
+        {% endif %}
+      </div>
+
+      <!-- Result -->
+      <div class="result-box">
+        {% if result %}
+          {% if result.label == 'Unknown' %}
+            <h2 class="result-title unknown">Unknown</h2>
+            <p class="note">Not matching known soil types</p>
+          {% else %}
+            <h2 class="result-title">Prediction: <span class="pred-label">{{ result.label }}</span></h2>
+            <p class="conf">
+              {% set c = (result.confidence*100 if result.confidence<=1 else result.confidence) %}
+              Confidence: {{ c|round(2) }}%
+            </p>
+
+            <div class="probs">
+              <h3>Probabilities</h3>
+              {% for k, v in result.probs.items() %}
+                {% set pct = (v*100 if v<=1 else v) %}
+                <div class="prob-item">
+                  <div class="prob-head"><span>{{ k }}</span><span>{{ pct|round(2) }}%</span></div>
+                  <div class="bar-wrap"><div class="bar" style="width: {{ pct|round(2) }}%"></div></div>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% else %}
+          <h2 class="result-title" style="color:var(--muted)">Awaiting prediction…</h2>
+          <p class="conf">Upload image to start</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- JS (kept inline as requested) -->
+  <script>
+    const fileInput = document.getElementById('file-input');
+    const fileText  = document.getElementById('file-text');
+    const lastFile  = document.getElementById('last_file');
+    const previewImg= document.getElementById('preview-img');
+    const clearBtn  = document.getElementById('clear-btn');
+
+    fileInput?.addEventListener('change', function () {
+      const f = this.files?.[0];
+      if (!f) { fileText.textContent = lastFile.value || 'No file chosen'; return; }
+      fileText.textContent = f.name;   // visible text
+      lastFile.value = f.name;         // persist across reload
+
+      if (previewImg) {
+        const r = new FileReader();
+        r.onload = e => { previewImg.src = e.target.result; previewImg.classList.remove('hidden'); };
+        r.readAsDataURL(f);
+      }
+    });
+
+    clearBtn?.addEventListener('click', () => {
+      lastFile.value = "";
+      window.location = "{{ url_for('index') }}";
+    });
+  </script>
+</body>
+</html>

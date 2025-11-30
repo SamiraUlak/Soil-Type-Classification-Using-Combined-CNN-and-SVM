@@ -1,0 +1,5 @@
+{
+  "max_prob_tau": 0.75,
+  "margin_tau": 0.60,
+  "entropy_tau": 0.50
+}
